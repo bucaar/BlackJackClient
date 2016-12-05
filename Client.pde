@@ -16,47 +16,31 @@ public class Client implements Runnable {
   public Client(String host, int port) {
     this.host = host;
     this.port = port;
-
     try {
       socket = new Socket(this.host, this.port);
       input = socket.getInputStream();
       output = socket.getOutputStream();
-
       thread = new Thread(this);
       thread.start();
-
       disposeRegistered = true;
-
     } catch (ConnectException ce) {
       ce.printStackTrace();
       dispose();
-
     } catch (IOException e) {
       e.printStackTrace();
       dispose();
     }
   }
-
-  
-  /**
-   * @param socket any object of type Socket
-   * @throws IOException
-   */
   public Client(Socket socket) throws IOException {
     this.socket = socket;
-
     input = socket.getInputStream();
     output = socket.getOutputStream();
-
     thread = new Thread(this);
     thread.start();
-
   }
   public void stop() {    
     dispose();
   }
-
-
   public void dispose() {
     thread = null;
     try {
@@ -67,7 +51,6 @@ public class Client implements Runnable {
     } catch (Exception e) {
       e.printStackTrace();
     }
-
     try {
       if (output != null) {
         output.close();
@@ -76,7 +59,6 @@ public class Client implements Runnable {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    
     try {
       if (socket != null) {
         socket.close();
@@ -86,35 +68,24 @@ public class Client implements Runnable {
       e.printStackTrace();
     }
   }
-
-
   public void run() {
     while (Thread.currentThread() == thread) {
       try {
         while (input != null) {
           int value;
-
-          // try to read a byte using a blocking read. 
-          // An exception will occur when the sketch is exits.
           try {
             value = input.read();
           } catch (SocketException e) {
              System.err.println("Client SocketException: " + e.getMessage());
-             // the socket had a problem reading so don't try to read from it again.
              stop();
              return;
           }
-        
-          // read returns -1 if end-of-stream occurs (for example if the host disappears)
           if (value == -1) {
             System.err.println("Client got end-of-stream.");
             stop();
             return;
           }
-
           synchronized (buffer) {
-            // todo: at some point buffer should stop increasing in size, 
-            // otherwise it could use up all the memory.
             if (bufferLast == buffer.length) {
               byte temp[] = new byte[bufferLast << 1];
               System.arraycopy(buffer, 0, temp, 0, bufferLast);
@@ -124,12 +95,10 @@ public class Client implements Runnable {
           }
         }
       } catch (IOException e) {
-        //errorMessage("run", e);
         e.printStackTrace();
       }
     }
   }
-
   public boolean active() {
     return (thread != null);
   }
@@ -148,7 +117,6 @@ public class Client implements Runnable {
   }
   public int read() {
     if (bufferIndex == bufferLast) return -1;
-
     synchronized (buffer) {
       int outgoing = buffer[bufferIndex++] & 0xff;
       if (bufferIndex == bufferLast) {  // rewind
@@ -164,12 +132,10 @@ public class Client implements Runnable {
   }
   public byte[] readBytes() {
     if (bufferIndex == bufferLast) return null;
-
     synchronized (buffer) {
       int length = bufferLast - bufferIndex;
       byte outgoing[] = new byte[length];
       System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
       bufferIndex = 0;  // rewind
       bufferLast = 0;
       return outgoing;
@@ -177,12 +143,10 @@ public class Client implements Runnable {
   }
   public int readBytes(byte bytebuffer[]) {
     if (bufferIndex == bufferLast) return 0;
-
     synchronized (buffer) {
       int length = bufferLast - bufferIndex;
       if (length > bytebuffer.length) length = bytebuffer.length;
       System.arraycopy(buffer, bufferIndex, bytebuffer, 0, length);
-
       bufferIndex += length;
       if (bufferIndex == bufferLast) {
         bufferIndex = 0;  // rewind
@@ -194,7 +158,6 @@ public class Client implements Runnable {
   public byte[] readBytesUntil(int interesting) {
     if (bufferIndex == bufferLast) return null;
     byte what = (byte)interesting;
-
     synchronized (buffer) {
       int found = -1;
       for (int k = bufferIndex; k < bufferLast; k++) {
@@ -204,11 +167,9 @@ public class Client implements Runnable {
         }
       }
       if (found == -1) return null;
-
       int length = found - bufferIndex + 1;
       byte outgoing[] = new byte[length];
       System.arraycopy(buffer, bufferIndex, outgoing, 0, length);
-
       bufferIndex += length;
       if (bufferIndex == bufferLast) {
         bufferIndex = 0; // rewind
@@ -220,7 +181,6 @@ public class Client implements Runnable {
   public int readBytesUntil(int interesting, byte byteBuffer[]) {
     if (bufferIndex == bufferLast) return 0;
     byte what = (byte)interesting;
-
     synchronized (buffer) {
       int found = -1;
       for (int k = bufferIndex; k < bufferLast; k++) {
@@ -230,7 +190,6 @@ public class Client implements Runnable {
         }
       }
       if (found == -1) return 0;
-
       int length = found - bufferIndex + 1;
       if (length > byteBuffer.length) {
         System.err.println("readBytesUntil() byte buffer is" +
@@ -240,7 +199,6 @@ public class Client implements Runnable {
       }
       //byte outgoing[] = new byte[length];
       System.arraycopy(buffer, bufferIndex, byteBuffer, 0, length);
-
       bufferIndex += length;
       if (bufferIndex == bufferLast) {
         bufferIndex = 0;  // rewind
@@ -262,23 +220,15 @@ public class Client implements Runnable {
     try {
       output.write(data & 0xff);  // for good measure do the &
       output.flush();   // hmm, not sure if a good idea
-
     } catch (Exception e) { // null pointer or serial port dead
-      //errorMessage("write", e);
-      //e.printStackTrace();
-      //dispose();
-      //disconnect(e);
       e.printStackTrace();
       stop();
     }
   }
-
-
   public void write(byte data[]) {
     try {
       output.write(data);
       output.flush();   // hmm, not sure if a good idea
-
     } catch (Exception e) { // null pointer or serial port dead
       e.printStackTrace();
       stop();
