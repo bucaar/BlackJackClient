@@ -14,35 +14,45 @@ int state = 0;
 Client client;
 String username = "";
 int money = 100;
+int bet = 10;
+int side = 10;
 String message;
 int lastMessage = 0;
 
-int fontSize = 32;
-boolean next = true;
+int fontSize = 72;
+
+Button downButton;
 
 void setup(){
-  size(600, 600);
-  //fullScreen();
+  //size(600, 600);
   buttons = new Button[10][];
-  username += (char)random('A', 'Z'+1);
-  for(int i=0;i<5;i++){
-    username += (char)random('a', 'z'+1);
-  }
-  client = new Client("localhost", 4949);
+  username = new Name().generateName();
+  client = new Client("192.168.43.38", 4949);
   
+  int h = (height - 10 - 10 - 10*(3-1))/3;
   
-  buttons[0] = new Button[]{new Button(10, 10, width-20, height-20, "Join as\n" + username, fontSize, color(170), color(0), new Action(){
-    public void execute(){
-      writeString("J " + username);
-    }
-  })
+  buttons[0] = new Button[]{
+    new Button(10, 10 + 0 * (h + 10), width-20, h, "Welcome to BlackJack!", fontSize, color(100), color(170), new Action(){
+      public void execute(){
+        println("click");
+      }
+    }),
+    new Button(10, 10 + 1 * (h + 10), width-20, h,  "Join as " + username, fontSize, color(170), color(0), new Action(){
+      public void execute(){
+        writeString("J " + username);
+      }
+    }),
+    new Button(10, 10 + 2 * (h + 10), width-20, h, "Exit", fontSize, color(170), color(0), new Action(){
+      public void execute(){
+        exit();
+      }
+    })
   };
-  
 }
 
 void draw(){
   //if it has been long enough since our last message..
-  if(millis() - lastMessage > 1000 && next){
+  if(millis() - lastMessage > 1500){
     //see if we got anything useful from the server!
     String in = readString();
     if(in != null){
@@ -69,14 +79,15 @@ void draw(){
         buttons[1] = new Button[seats.length];
         for(int i=0;i<seats.length;i++){
           String[] data = seats[i].split(" ");
-          int seat = Integer.parseInt(data[0]);
+          final int SEAT = Integer.parseInt(data[0]);
           String user = data[1];
           int h = (height - 10 - 10 - 10*(seats.length-1))/seats.length;
           int y = 10 + i * (h + 10);
+          //final int SEAT = i;
           if(user.equals("O")){
-            buttons[1][i] = new Button(10, y, width-20, h, "Seat " + i, fontSize, color(170), color(0), new Action(){
+            buttons[1][i] = new Button(10, y, width-20, h, "Seat " + SEAT, fontSize, color(170), color(0), new Action(){
               public void execute(){
-                writeString("S " + (int)random(buttons[1].length));
+                writeString("S " + SEAT);
               }
             });
           }
@@ -90,25 +101,50 @@ void draw(){
       }
       else if(type == 'T'){
         state = 2;
-        int h = (height - 10 - 10 - 10*(4-1))/4;
+        try{
+          money = Integer.parseInt(in);
+        }
+        catch(Exception e){}
+        final int h = (height - 10 - 10 - 10*(5-1))/5;
         buttons[2] = new Button[]{
-          new Button(10, 10 + 0 * (h + 10), width-20, h, "Bet $10", fontSize, color(170), color(0), new Action(){
+          new Button(10, 10 + 0 * (h + 10), width-20, h, "You have $" + money, fontSize, color(100), color(170), new Action(){
             public void execute(){
-              writeString("B 10");
+              
             }
           }),
-          new Button(10, 10 + 1 * (h + 10), width-20, h, "Bet $30", fontSize, color(170), color(0), new Action(){
+          new Button(10, 10 + 1 * (h + 10), width-20, h, "Increase Bet", fontSize, color(170), color(0), new Action(){
             public void execute(){
-              writeString("B 30");
+              bet += 10;
+              
+              buttons[2][2] = new Button(10, 10 + 2 * (h + 10), width-20, h, "Bet $" + bet, fontSize, color(170), color(0), new Action(){
+                public void execute(){
+                  writeString("B " + bet);
+                }
+              });
+              
             }
           }),
-          new Button(10, 10 + 2 * (h + 10), width-20, h, "Bet $50", fontSize, color(170), color(0), new Action(){
+          new Button(10, 10 + 2 * (h + 10), width-20, h, "Bet $" + bet, fontSize, color(170), color(0), new Action(){
             public void execute(){
-              writeString("B 50");
+              writeString("B " + bet);
             }
-          })
-          ,
-          new Button(10, 10 + 3 * (h + 10), width-20, h, "Leave", fontSize, color(170), color(0), new Action(){
+          }),
+          new Button(10, 10 + 3 * (h + 10), width-20, h, "Decrease Bet", fontSize, color(170), color(0), new Action(){
+            public void execute(){
+              bet -= 10;
+              if( bet<0){
+                bet = 0;
+              }
+              
+              buttons[2][2] = new Button(10, 10 + 2 * (h + 10), width-20, h, "Bet $" + bet, fontSize, color(170), color(0), new Action(){
+                public void execute(){
+                  writeString("B " + bet);
+                }
+              });
+              
+            }
+          }),
+          new Button(10, 10 + 4 * (h + 10), width-20, h, "Leave Table", fontSize, color(170), color(0), new Action(){
             public void execute(){
               writeString("L");
             }
@@ -117,6 +153,7 @@ void draw(){
       }
       else if(type == 'G'){
         state = 3;
+        side = bet;
         int h = (height - 10 - 10 - 10*(4-1))/4;
         buttons[3] = new Button[]{
           new Button(10, 10 + 0 * (h + 10), width-20, h, "Hit", fontSize, color(170), color(0), new Action(){
@@ -129,14 +166,14 @@ void draw(){
               writeString("T");
             }
           }),
-          new Button(10, 10 + 2 * (h + 10), width-20, h, "Split", fontSize, color(170), color(0), new Action(){
+          new Button(10, 10 + 2 * (h + 10), width-20, h, "Split $" + side, fontSize, color(170), color(0), new Action(){
             public void execute(){
-              writeString("P");
+              writeString("P " + side);
             }
           }),
-          new Button(10, 10 + 3 * (h + 10), width-20, h, "Double", fontSize, color(170), color(0), new Action(){
+          new Button(10, 10 + 3 * (h + 10), width-20, h, "Double $" + side, fontSize, color(170), color(0), new Action(){
             public void execute(){
-              writeString("D");
+              writeString("D " + side);
             }
           })
         };
@@ -204,7 +241,7 @@ void draw(){
     }
   }
   
-  background(0);
+  background(60,160,80);
   if(state >= 0 && state < 6){
     for(Button b : buttons[state]){
       b.render();
@@ -228,16 +265,41 @@ void draw(){
     textSize(fontSize);
     text(message, 0, 0, width, height);
   }
+  
+  //text(frameRate,100,100);
 }
 
 void mousePressed(){
-  next = true;
   if(state >= 0 && state < 6){
     for(Button b : buttons[state]){
       if(b.isOver(mouseX, mouseY)){
-        b.click();
+        //b.click();
+        downButton = b;
+        break;
       }
     }
+  }
+}
+
+void mouseReleased(){
+  if(state >= 0 && state < 6){
+    for(Button b : buttons[state]){
+      if(b.isOver(mouseX, mouseY)){
+        //b.click();
+        if(downButton == b){
+          b.click();
+          break;
+        }
+        //break;
+      }
+    }
+  }
+  downButton = null;
+}
+
+void mouseDragged(){
+  if(downButton != null && !downButton.isOver(mouseX, mouseY)){
+    downButton = null;
   }
 }
 
@@ -247,6 +309,8 @@ class Button{
   private color bgcolor;
   private color textcolor;
   private String text;
+  
+  private float glow = 0;
   
   public Button(int x, int y, int w, int h, String text, int textsize, color bg, color textcolor, Action a){
     this.x = x;
@@ -261,8 +325,17 @@ class Button{
   }
   
   public void render(){
+    strokeWeight(5);
+    stroke(brightness(bgcolor)-50);
     fill(bgcolor);
-    rect(x, y, w, h, 5);
+    if(!mousePressed){
+      glow = 0;
+    }
+    if(isOver(mouseX, mouseY) && downButton == this){
+      fill(brightness(bgcolor)+cos(glow)*25);
+      glow+=.15;
+    }
+    rect(x, y, w, h, min(w, h)/5);
     fill(textcolor);
     textAlign(CENTER, CENTER);
     textSize(textsize);
@@ -288,6 +361,8 @@ public void writeString(String message){
 }
 
 public String readString(){
+  if(client == null)
+    return null;
   String in = client.readStringUntil('\n');
   return in==null?null:in.trim();
   
